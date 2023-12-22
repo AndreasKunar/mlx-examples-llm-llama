@@ -1,2 +1,10 @@
-./mlx_model/
-./Llama-2*/
+# standard ignores:
+.vscode/*
+__pycache__/
+*.py[cod]
+.DS_STORE
+
+# models:
+mlx_model/
+mlx_model
+Llama-2*/
