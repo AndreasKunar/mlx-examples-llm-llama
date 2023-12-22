@@ -241,14 +241,12 @@ class Llama(nn.Module):
 
 def generate(args,stats):
 
-    print("------")
     print(args.prompt)
     stats.start_gen = time.time()
     x = mx.array([[tokenizer.bos_id()] + tokenizer.encode(args.prompt)])
     stats.num_tokens_prompt = x.shape[1]-1
     skip = 0
     tokens = []
-    stats.start_gen = time.time()
     for token in model.generate(x, args.temp):
         tokens.append(token)
 
@@ -272,7 +270,7 @@ def generate(args,stats):
     s = tokenizer.decode([t.item() for t in tokens])
     print(s[skip:], flush=True)
     stats.num_tokens_response = len(tokens)
-    print("------")
+    
 
 def sanitize_config(config, weights):
     config.pop("model_type", None)
@@ -339,14 +337,16 @@ if __name__ == "__main__":
 
     print("[INFO] Loading model from disk.")
     model, tokenizer = load_model(args.model_path, stats)
+    print("------")
     generate(args, stats)
+    print("------")
 
     # print statistics
-    print("[INFO] Statistics:")
-    print(f"[INFO]        load time: {(stats.end_load - stats.start_load) * 1000:.2f} ms")
-    print(f"[INFO] prompt eval time: {(stats.end_prompt - stats.start_gen) * 1000:.2f} ms / {stats.num_tokens_prompt} tokens ",\
-          f" ({(stats.end_prompt - stats.start_gen) * 1000 / stats.num_tokens_prompt:.2f} ms/token, {stats.num_tokens_prompt / (stats.end_prompt - stats.start_gen):.2f} token/s)")
-    print(f"[INFO]        eval time: {(stats.end_gen - stats.end_prompt) * 1000:.2f} ms / {stats.num_tokens_response} tokens ",\
-          f"({(stats.end_gen - stats.end_prompt) *1000 / stats.num_tokens_response:.2f} ms/token, {stats.num_tokens_response / (stats.end_gen - stats.end_prompt):.2f} token/s)")
+    print("Statistics:")
+    print(f"       load time: {(stats.end_load - stats.start_load):>8.3f} s")
+    print(f"prompt eval time: {(stats.end_prompt - stats.start_gen):>8.3f} s / {stats.num_tokens_prompt:5} tokens ",\
+          f"({stats.num_tokens_prompt / (stats.end_prompt - stats.start_gen):>7.2f} token/s)")
+    print(f"       eval time: {(stats.end_gen - stats.end_prompt):>8.3f} s / {stats.num_tokens_response:5} tokens ",\
+          f"({stats.num_tokens_response / (stats.end_gen - stats.end_prompt):>7.2f} token/s)")
 
 
