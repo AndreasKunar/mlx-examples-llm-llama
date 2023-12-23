@@ -319,10 +319,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--prompt",
         help="The message to be processed by the model. Ignored when --few-shot is provided.",
-        default="In the beginning the Universe was created.",
+        default="This is a detailed essay on the advantages of cats as pets. Written by a very helpful assistant. ",
     )
     parser.add_argument(
-        "--max-tokens", "-m", type=int, default=100, help="How many tokens to generate"
+        "--max-tokens", "-m", type=int, default=128, help="How many tokens to generate"
     )
     parser.add_argument(
         "--write-every", type=int, default=1, help="After how many tokens to detokenize"
@@ -331,7 +331,7 @@ if __name__ == "__main__":
         "--temp", type=float, default=0.0, help="The sampling temperature"
     )
     parser.add_argument("--seed", type=int, default=0, help="The PRNG seed")
-    parser.add_argument("--no-print", type=bool, default=False, help="Do not print the generated text")
+    parser.add_argument("--no-print", type=bool, default=True, help="Do not print the generated text")
 
     args = parser.parse_args()
 
@@ -341,6 +341,7 @@ if __name__ == "__main__":
     start_load = time.time()
     model, tokenizer = load_model(args.model_path)
     stats.time_load = time.time() - start_load
+    print("[INFO] Generating response.")
     if not args.no_print:
         print("------")
     generate(args)
