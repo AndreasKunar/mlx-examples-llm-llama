@@ -28,14 +28,11 @@ class ModelArgs:
 
 @dataclass
 class ModelStats:
-    start_load: float = 0
-    end_load: float = 0
-    start_gen: float = 0
-    end_prompt: float = 0
-    end_gen: float = 0
+    time_load: float = 0
+    time_prompt: float = 0
     num_tokens_prompt: int = 0
+    time_response: float = 0
     num_tokens_response: int = 0
-
 
 class RMSNorm(nn.Module):
     def __init__(self, dims: int, eps: float = 1e-5):
@@ -239,26 +236,27 @@ class Llama(nn.Module):
             yield y
 
 
-def generate(args,stats):
+def generate(args):
 
-    print(args.prompt)
-    stats.start_gen = time.time()
+    if not args.no_print:
+        print(args.prompt)
     x = mx.array([[tokenizer.bos_id()] + tokenizer.encode(args.prompt)])
-    stats.num_tokens_prompt = x.shape[1]-1
     skip = 0
     tokens = []
+    start_gen = time.time() # exclude tokenizer encode time
     for token in model.generate(x, args.temp):
         tokens.append(token)
 
         if len(tokens) == 1:
             # Actually perform the computation to measure the prompt processing time
             mx.eval(token)
-            stats.end_prompt = time.time()
+            end_prompt = time.time()
 
         if len(tokens) >= args.max_tokens:
             break
 
-        elif (len(tokens) % args.write_every) == 0:
+        if (not args.no_print) and \
+          (len(tokens) % args.write_every) == 0:
             # It is perfectly ok to eval things we have already eval-ed.
             mx.eval(tokens)
             s = tokenizer.decode([t.item() for t in tokens])
@@ -266,11 +264,20 @@ def generate(args,stats):
             skip = len(s)
 
     mx.eval(tokens)
-    stats.end_gen = time.time()
-    s = tokenizer.decode([t.item() for t in tokens])
-    print(s[skip:], flush=True)
+    end_gen = time.time()
+    if not args.no_print:
+        s = tokenizer.decode([t.item() for t in tokens])
+        print(s[skip:], flush=True)
+    # statistics
+    stats.num_tokens_prompt = x.shape[1]-1
     stats.num_tokens_response = len(tokens)
-    
+    stats.time_prompt = end_prompt - start_gen
+    stats.time_response = end_gen - end_prompt
+    # correct timing because prompt-eval initially includes 1st token
+    time_1_resp = stats.time_response / (stats.num_tokens_response - 1)
+    stats.time_prompt -= time_1_resp
+    stats.time_response += time_1_resp
+
 
 def sanitize_config(config, weights):
     config.pop("model_type", None)
@@ -291,8 +298,7 @@ def sanitize_config(config, weights):
     return config
 
 
-def load_model(model_path,stats):
-    stats.start_load = time.time()
+def load_model(model_path):
     model_path = Path(model_path)
     weights = mx.load(str(model_path / "weights.npz"))
     with open(model_path / "config.json", "r") as f:
@@ -303,7 +309,6 @@ def load_model(model_path,stats):
         nn.QuantizedLinear.quantize_module(model, **quantization)
     model.update(tree_unflatten(list(weights.items())))
     tokenizer = SentencePieceProcessor(model_file=str(model_path / "tokenizer.model"))
-    stats.end_load = time.time()
     return model, tokenizer
 
 
@@ -330,23 +335,26 @@ if __name__ == "__main__":
         "--temp", type=float, default=0.0, help="The sampling temperature"
     )
     parser.add_argument("--seed", type=int, default=0, help="The PRNG seed")
+    parser.add_argument("--no-print", type=bool, default=False, help="Do not print the generated text")
 
     args = parser.parse_args()
 
     mx.random.seed(args.seed)
 
     print("[INFO] Loading model from disk.")
-    model, tokenizer = load_model(args.model_path, stats)
-    print("------")
-    generate(args, stats)
-    print("------")
+    start_load = time.time()
+    model, tokenizer = load_model(args.model_path)
+    stats.time_load = time.time() - start_load
+    if not args.no_print:
+        print("------")
+    generate(args)
+    if not args.no_print:
+        print("------")
 
     # print statistics
     print("Statistics:")
-    print(f"       load time: {(stats.end_load - stats.start_load):>8.3f} s")
-    print(f"prompt eval time: {(stats.end_prompt - stats.start_gen):>8.3f} s / {stats.num_tokens_prompt:5} tokens ",\
-          f"({stats.num_tokens_prompt / (stats.end_prompt - stats.start_gen):>7.2f} token/s)")
-    print(f"       eval time: {(stats.end_gen - stats.end_prompt):>8.3f} s / {stats.num_tokens_response:5} tokens ",\
-          f"({stats.num_tokens_response / (stats.end_gen - stats.end_prompt):>7.2f} token/s)")
-
-
+    print(f"       load time: {(stats.time_load):>8.3f} s")
+    print(f"prompt eval time: {(stats.time_prompt):>8.3f} s / {stats.num_tokens_prompt:5} tokens ",\
+          f"({stats.num_tokens_prompt / (stats.time_prompt):>7.2f} token/s)")
+    print(f"       eval time: {(stats.time_response):>8.3f} s / {stats.num_tokens_response:5} tokens ",\
+          f"({stats.num_tokens_response / (stats.time_response):>7.2f} token/s)")
