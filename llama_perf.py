@@ -237,7 +237,6 @@ class Llama(nn.Module):
 
 
 def generate(args):
-
     if not args.no_print:
         print(args.prompt)
     x = mx.array([[tokenizer.bos_id()] + tokenizer.encode(args.prompt)])
@@ -262,7 +261,7 @@ def generate(args):
             s = tokenizer.decode([t.item() for t in tokens])
             print(s[skip:], end="", flush=True)
             skip = len(s)
-
+    # eval the rest
     mx.eval(tokens)
     end_gen = time.time()
     if not args.no_print:
@@ -277,7 +276,6 @@ def generate(args):
     time_1_resp = stats.time_response / (stats.num_tokens_response - 1)
     stats.time_prompt -= time_1_resp
     stats.time_response += time_1_resp
-
 
 def sanitize_config(config, weights):
     config.pop("model_type", None)
@@ -297,7 +295,6 @@ def sanitize_config(config, weights):
         config.pop(k, None)
     return config
 
-
 def load_model(model_path):
     model_path = Path(model_path)
     weights = mx.load(str(model_path / "weights.npz"))
@@ -310,7 +307,6 @@ def load_model(model_path):
     model.update(tree_unflatten(list(weights.items())))
     tokenizer = SentencePieceProcessor(model_file=str(model_path / "tokenizer.model"))
     return model, tokenizer
-
 
 if __name__ == "__main__":
     stats = ModelStats()
