@@ -316,10 +316,14 @@ if __name__ == "__main__":
         help="Path to the model directory containing the MLX weights",
         default="mlx_model",
     )
+    # performance test with 512 Token (511 + BOS)
+    prompt_default=""
+    for _ in range(511):
+            prompt_default += " hello"
     parser.add_argument(
         "--prompt",
         help="The message to be processed by the model. Ignored when --few-shot is provided.",
-        default="This is a detailed essay on the advantages of cats as pets. Written by a very helpful assistant. ",
+        default=prompt_default,
     )
     parser.add_argument(
         "--max-tokens", "-m", type=int, default=128, help="How many tokens to generate"
