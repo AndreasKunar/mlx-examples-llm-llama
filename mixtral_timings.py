@@ -300,10 +300,11 @@ if __name__ == "__main__":
         default="mlx_model",
         help="The path to the model weights, tokenizer, and config",
     )
-    # performance test with 512 Token (511 + BOS)
+    # performance test with 512 Token (2*255 2-token + 1 token + BOS)
     prompt_default=""
-    for _ in range(511):
-            prompt_default += " hello"
+    for _ in range(255):
+        prompt_default += " hello"
+    prompt_default += "."
     parser.add_argument(
         "--prompt",
         help="The message to be processed by the model",
@@ -362,7 +363,7 @@ if __name__ == "__main__":
     print(s, flush=True)
 
     # statistics
-    num_tokens_prompt = len(prompt)
+    num_tokens_prompt = len(prompt)-1
     num_tokens_response = i+1
     # correct timing because prompt-eval initially includes 1st token
     time_1_resp_token = time_response / (num_tokens_response - 1)
