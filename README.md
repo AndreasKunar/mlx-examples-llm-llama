@@ -1,3 +1,5 @@
+# no longer maintained / obsolete
+
 # mlx-explore/mlx-examples's `llama.py` and `mixtral.py` with token/s timings and better benchmarking-defaults
 
 ***This is based on [mlx-explore / mlx-examples/llm](https://github.com/ml-explore/mlx-examples.git). Please consult its [README.md](https://github.com/ml-explore/mlx-examples/blob/main/README.md) for setup,... information.***
